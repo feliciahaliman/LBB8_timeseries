@@ -1,0 +1,132 @@
+---
+title: "LBB 8: Time Series and Forecasting [Kelahiran di Jakarta]"
+author: "Felicia Haliman"
+date: "`r format(Sys.Date(), '%B %e, %Y')`"
+output:
+  html_document:
+    number_sections: false
+    df_print: paged
+    highlight: tango
+    theme: cosmo
+    toc: yes
+    toc_depth: 4
+    toc_float:
+      collapsed: false
+---
+
+```{r setup, include=FALSE}
+# clear-up the environment
+rm(list = ls())
+
+# chunk options
+knitr::opts_chunk$set(
+  message = FALSE,
+  warning = FALSE,
+  fig.align = "center",
+  comment = "#>"
+)
+
+options(scipen = 999)
+```
+
+<style>
+body {
+text-align: justify}
+</style>
+
+# Study Case
+
+Pada kesempatan kali ini saya akan forecast dengan time series, mengenai berapa jumlah kelahiran bayi yang akan lahir pada semester 2 pada tahun 2021 di Jakarta.
+
+# Library
+
+Dalam kasus ini saya menggunakan beberapa package untuk melakukan pengujian
+
+```{r warning = FALSE, message = FALSE}
+set.seed(666)
+library(dplyr)
+library(forecast)
+library(plotly)
+library(TTR)
+library(MLmetrics)
+library(tseries)
+```
+
+# Read Data
+
+```{r}
+kelahiran <- read.csv("data/data-jumlah-pelaporan-kelahiran-berdasarkan-jenis-kelamin-per-kelurahan-bulan-januari-tahun-2021.csv")
+```
+
+```{r}
+head(kelahiran,3)
+```
+```{r}
+glimpse(kelahiran)
+```
+Berikut adalah penjelasan mengenai variable-variable yang terdapat dalam data yang di merge.\
+Tahun dan Bulan kelahiran: data tersebut diambil pada semester 1 tahun 2021.\
+Kota Kabupaten: Wilayah Jakarta pada bagian mana.\
+Kecamatan dan kelurahan: Wilayah administrasi dari kelahiran tersebut.\
+Jenis Kelamin: jenis dari kelahiran tersebut.\
+Jumlah: Jumlah dari kelahiran tersebut.
+
+## Check data
+## Check missing value
+
+```{r}
+colSums(is.na(kelahiran))
+```
+Tidak adanya missing value.
+
+# Pemodelan Data
+
+```{r}
+lahir <- ts(data = kelahiran$jumlah,
+   start = range(kelahiran$bulan)[[1]],
+   frequency = 7) 
+```
+
+# Time Series
+
+## Forecast
+
+```{r}
+# forecast
+a <- forecast(lahir)
+
+a # the forecasted value + confidence interval from ETS model
+```
+
+## Assumption Check
+
+Normality: Shapiro.test
+
+H0 : residuals are normally distributed
+H1 : residuals are not normally distributed
+
+```{r}
+shapiro.test(a$residuals) # p-value < 0.05; reject H0; accept H1 
+```
+Kesimpulannya, terima H1
+
+```{r}
+hist(a$residuals, breaks = 20)
+```
+
+```{r}
+plot(a$residuals)
+```
+
+Autocorrelation: Box.test - Ljng-Box
+
+H0 : No autocorrelation in the forecast errors
+H1 : there is an autocorrelation in the forecast errors
+
+```{r}
+Box.test(a$residuals, type = "Ljung-Box") # there is not enough data to reject H0
+```
+
+# Conclusion
+
+Data tidak terdistribusi normal dan kemungkinan akan terjadi banyak kelahiran pada semester kedua.
